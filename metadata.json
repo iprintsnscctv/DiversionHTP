@@ -1,0 +1,8 @@
+{
+  "name": "Diversion Vigan Transient HouseHTP",
+  "description": "Modern full-stack online booking, room availability calendar, reservations, and admin portal for Diversion Vigan Transient House in Vigan City, Ilocos Sur.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
