@@ -1198,7 +1198,7 @@ app.post('/api/reset', (req: Request, res: Response) => {
 
 // Start server with Vite middleware in dev or static files in production
 async function startServer() {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production' || fs.existsSync(path.resolve(__dirname, 'dist'));
 
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
