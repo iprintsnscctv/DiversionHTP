@@ -21,6 +21,28 @@ export const generateBookingRef = (): string => {
   return 'DVG-' + Math.random().toString(36).substring(2, 7).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
 };
 
+export const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'viganbooking.com' || window.location.hostname === 'www.viganbooking.com' || window.location.hostname.includes('viganbooking.com')))
+  ? 'https://www.viganbooking.com/api'
+  : '/api';
+
+// Dedicated interceptor helper for logging full request URL and response status
+export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const fullUrl = typeof input === 'string' && input.startsWith('http') 
+    ? input 
+    : `${typeof window !== 'undefined' ? window.location.origin : ''}${input}`;
+  
+  console.log(`[API Interceptor] Sending request: ${init?.method || 'GET'} -> ${fullUrl}`);
+  
+  try {
+    const response = await fetch(input, init);
+    console.log(`[API Interceptor] Received response: ${response.status} ${response.statusText} for ${fullUrl}`);
+    return response;
+  } catch (error) {
+    console.error(`[API Interceptor] Network or request error for ${fullUrl}:`, error);
+    throw error;
+  }
+}
+
 // API Client calls
 export const api = {
   async getRooms(params?: { category?: string; guests?: number; search?: string; availableDate?: string }): Promise<Room[]> {
@@ -31,7 +53,7 @@ export const api = {
       if (params?.search) query.set('search', params.search);
       if (params?.availableDate) query.set('availableDate', params.availableDate);
 
-      const res = await fetch(`/api/rooms?${query.toString()}`);
+      const res = await apiFetch(`${API_BASE}/rooms?${query.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch rooms');
       const json = await res.json();
       return json.data;
@@ -44,7 +66,7 @@ export const api = {
 
   async getRoomById(id: string): Promise<Room | null> {
     try {
-      const res = await fetch(`/api/rooms/${id}`);
+      const res = await apiFetch(`${API_BASE}/rooms/${id}`);
       if (!res.ok) return null;
       const json = await res.json();
       return json.data;
@@ -55,7 +77,7 @@ export const api = {
   },
 
   async createRoom(room: Partial<Room>): Promise<Room> {
-    const res = await fetch('/api/rooms', {
+    const res = await apiFetch(`${API_BASE}/rooms`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(room)
@@ -66,7 +88,7 @@ export const api = {
   },
 
   async updateRoom(id: string, room: Partial<Room>): Promise<Room> {
-    const res = await fetch(`/api/rooms/${id}`, {
+    const res = await apiFetch(`${API_BASE}/rooms/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(room)
@@ -77,12 +99,12 @@ export const api = {
   },
 
   async deleteRoom(id: string): Promise<void> {
-    const res = await fetch(`/api/rooms/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_BASE}/rooms/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete room');
   },
 
   async toggleRoomDate(id: string, date: string): Promise<string[]> {
-    const res = await fetch(`/api/rooms/${id}/toggle-date`, {
+    const res = await apiFetch(`${API_BASE}/rooms/${id}/toggle-date`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ date })
@@ -95,7 +117,7 @@ export const api = {
   async getBookings(query?: string): Promise<Booking[]> {
     try {
       const q = query ? `?query=${encodeURIComponent(query)}` : '';
-      const res = await fetch(`/api/bookings${q}`);
+      const res = await apiFetch(`${API_BASE}/bookings${q}`);
       if (!res.ok) throw new Error('Failed to fetch bookings');
       const json = await res.json();
       return json.data;
@@ -108,7 +130,7 @@ export const api = {
 
   async getBookingById(refId: string): Promise<Booking | null> {
     try {
-      const res = await fetch(`/api/bookings/${encodeURIComponent(refId)}`);
+      const res = await apiFetch(`${API_BASE}/bookings/${encodeURIComponent(refId)}`);
       if (!res.ok) return null;
       const json = await res.json();
       return json.data;
@@ -119,7 +141,7 @@ export const api = {
   },
 
   async createBooking(bookingData: any): Promise<Booking> {
-    const res = await fetch('/api/bookings', {
+    const res = await apiFetch(`${API_BASE}/bookings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookingData)
@@ -130,7 +152,7 @@ export const api = {
   },
 
   async updateBooking(id: string, data: Partial<Booking>): Promise<Booking> {
-    const res = await fetch(`/api/bookings/${encodeURIComponent(id)}`, {
+    const res = await apiFetch(`${API_BASE}/bookings/${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -141,7 +163,7 @@ export const api = {
   },
 
   async updateBookingStatus(id: string, status: string, paymentStatus?: string): Promise<Booking> {
-    const res = await fetch(`/api/bookings/${id}/status`, {
+    const res = await apiFetch(`${API_BASE}/bookings/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, paymentStatus })
@@ -152,14 +174,14 @@ export const api = {
   },
 
   async cancelBooking(id: string): Promise<void> {
-    const res = await fetch(`/api/bookings/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_BASE}/bookings/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to cancel booking');
   },
 
   async getReviews(status?: string): Promise<Review[]> {
     try {
       const q = status ? `?status=${encodeURIComponent(status)}` : '';
-      const res = await fetch(`/api/reviews${q}`);
+      const res = await apiFetch(`${API_BASE}/reviews${q}`);
       if (!res.ok) throw new Error('Failed to fetch reviews');
       const json = await res.json();
       return json.data;
@@ -169,7 +191,7 @@ export const api = {
   },
 
   async submitReview(reviewData: { roomId: string; guestName: string; rating: number; comment: string }): Promise<Review> {
-    const res = await fetch('/api/reviews', {
+    const res = await apiFetch(`${API_BASE}/reviews`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(reviewData)
@@ -180,7 +202,7 @@ export const api = {
   },
 
   async updateReviewStatus(id: string, status: 'Approved' | 'Pending' | 'Rejected'): Promise<Review> {
-    const res = await fetch(`/api/reviews/${id}/status`, {
+    const res = await apiFetch(`${API_BASE}/reviews/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
@@ -191,12 +213,12 @@ export const api = {
   },
 
   async deleteReview(id: string): Promise<void> {
-    const res = await fetch(`/api/reviews/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_BASE}/reviews/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete review');
   },
 
   async submitInquiry(inquiry: { name: string; email: string; phone: string; message: string; roomPreference?: string }): Promise<Inquiry> {
-    const res = await fetch('/api/inquiries', {
+    const res = await apiFetch(`${API_BASE}/inquiries`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(inquiry)
@@ -208,7 +230,7 @@ export const api = {
 
   async getInquiries(): Promise<Inquiry[]> {
     try {
-      const res = await fetch('/api/inquiries');
+      const res = await apiFetch(`${API_BASE}/inquiries`);
       if (!res.ok) return [];
       const json = await res.json();
       return json.data;
@@ -218,13 +240,13 @@ export const api = {
   },
 
   async getStats(): Promise<AdminStats> {
-    const res = await fetch('/api/stats');
+    const res = await apiFetch(`${API_BASE}/stats`);
     if (!res.ok) throw new Error('Failed to fetch stats');
     const json = await res.json();
     return json.data;
   },
 
   async resetDemoData(): Promise<void> {
-    await fetch('/api/reset', { method: 'POST' });
+    await apiFetch(`${API_BASE}/reset`, { method: 'POST' });
   }
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Room, Booking, Review, Inquiry } from './types';
-import { api } from './services/api';
+import { api, API_BASE } from './services/api';
 
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
@@ -89,6 +89,12 @@ export default function App() {
   };
 
   useEffect(() => {
+    console.log('--- DIVERSION VIGAN DIAGNOSTIC CHECK ---');
+    console.log('Current Hostname:', typeof window !== 'undefined' ? window.location.hostname : 'SSR');
+    console.log('Current Protocol:', typeof window !== 'undefined' ? window.location.protocol : 'SSR');
+    console.log('API Base URL:', API_BASE);
+    console.log('Full Rooms API Endpoint:', `${API_BASE}/rooms`);
+    console.log('-----------------------------------------');
     loadAllData();
   }, []);
 
