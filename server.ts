@@ -726,7 +726,9 @@ const INITIAL_REVIEWS: Review[] = [
   }
 ];
 
-// In-memory runtime data store (persisted across requests)
+const DATA_FILE = path.join(__dirname, 'server_data.json');
+
+// In-memory runtime data store with permanent disk persistence
 let roomsDB: Room[] = [...INITIAL_ROOMS];
 let bookingsDB: Booking[] = [...INITIAL_BOOKINGS];
 let reviewsDB: Review[] = [...INITIAL_REVIEWS];
@@ -742,6 +744,36 @@ let inquiriesDB: Inquiry[] = [
     status: "New"
   }
 ];
+
+// Load from permanent disk storage if exists
+if (fs.existsSync(DATA_FILE)) {
+  try {
+    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (parsed.roomsDB) roomsDB = parsed.roomsDB;
+    if (parsed.bookingsDB) bookingsDB = parsed.bookingsDB;
+    if (parsed.reviewsDB) reviewsDB = parsed.reviewsDB;
+    if (parsed.inquiriesDB) inquiriesDB = parsed.inquiriesDB;
+    console.log("Loaded permanent database state from server_data.json successfully.");
+  } catch (e) {
+    console.error("Failed to parse server_data.json:", e);
+  }
+}
+
+function saveData() {
+  try {
+    const data = {
+      roomsDB,
+      bookingsDB,
+      reviewsDB,
+      inquiriesDB,
+      updatedAt: new Date().toISOString()
+    };
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error("Failed to save permanent database to server_data.json:", e);
+  }
+}
 
 // --- REST API ROUTES ---
 
@@ -810,6 +842,7 @@ app.post('/api/rooms', (req: Request, res: Response) => {
     reviewsCount: req.body.reviewsCount || 0
   };
   roomsDB.unshift(newRoom);
+  saveData();
   res.status(201).json({ success: true, data: newRoom });
 });
 
@@ -820,6 +853,7 @@ app.put('/api/rooms/:id', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, error: "Room not found" });
   }
   roomsDB[index] = { ...roomsDB[index], ...req.body };
+  saveData();
   res.json({ success: true, data: roomsDB[index] });
 });
 
@@ -830,6 +864,7 @@ app.delete('/api/rooms/:id', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, error: "Room not found" });
   }
   const deleted = roomsDB.splice(index, 1);
+  saveData();
   res.json({ success: true, data: deleted[0] });
 });
 
@@ -847,6 +882,7 @@ app.post('/api/rooms/:id/toggle-date', (req: Request, res: Response) => {
     room.bookedDates.push(date);
   }
 
+  saveData();
   res.json({ success: true, bookedDates: room.bookedDates });
 });
 
@@ -953,6 +989,7 @@ app.post('/api/bookings', (req: Request, res: Response) => {
   }
 
   bookingsDB.unshift(newBooking);
+  saveData();
   res.status(201).json({ success: true, data: newBooking });
 });
 
@@ -998,6 +1035,7 @@ app.put('/api/bookings/:id', (req: Request, res: Response) => {
   }
 
   bookingsDB[index] = updatedBooking;
+  saveData();
   res.json({ success: true, data: updatedBooking });
 });
 
@@ -1012,6 +1050,7 @@ app.patch('/api/bookings/:id/status', (req: Request, res: Response) => {
   if (status) booking.status = status;
   if (paymentStatus) booking.paymentStatus = paymentStatus;
 
+  saveData();
   res.json({ success: true, data: booking });
 });
 
@@ -1022,6 +1061,7 @@ app.delete('/api/bookings/:id', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, error: "Booking not found" });
   }
   const cancelled = bookingsDB.splice(index, 1)[0];
+  saveData();
   res.json({ success: true, data: cancelled });
 });
 
@@ -1064,6 +1104,7 @@ app.post('/api/reviews', (req: Request, res: Response) => {
     }
   }
 
+  saveData();
   res.status(201).json({ success: true, data: newReview });
 });
 
@@ -1075,6 +1116,7 @@ app.patch('/api/reviews/:id/status', (req: Request, res: Response) => {
   }
 
   review.status = status;
+  saveData();
   res.json({ success: true, data: review });
 });
 
@@ -1084,6 +1126,7 @@ app.delete('/api/reviews/:id', (req: Request, res: Response) => {
     return res.status(404).json({ success: false, error: "Review not found" });
   }
   const deleted = reviewsDB.splice(index, 1)[0];
+  saveData();
   res.json({ success: true, data: deleted });
 });
 
@@ -1104,6 +1147,7 @@ app.post('/api/inquiries', (req: Request, res: Response) => {
     status: 'New'
   };
   inquiriesDB.unshift(newInquiry);
+  saveData();
   res.status(201).json({ success: true, data: newInquiry });
 });
 
@@ -1148,6 +1192,7 @@ app.post('/api/reset', (req: Request, res: Response) => {
   roomsDB = JSON.parse(JSON.stringify(INITIAL_ROOMS));
   bookingsDB = JSON.parse(JSON.stringify(INITIAL_BOOKINGS));
   reviewsDB = JSON.parse(JSON.stringify(INITIAL_REVIEWS));
+  saveData();
   res.json({ success: true, message: "Demo database reset to default Diversion Vigan records." });
 });
 
